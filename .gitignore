@@ -1,0 +1,23 @@
+# Maven build outputs
+backend/target/
+**/target/
+dependency-reduced-pom.xml
+*.jar
+*.class
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+venv/
+.venv/
+
+# IDE & Editor files
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db

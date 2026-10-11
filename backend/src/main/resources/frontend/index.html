@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔥 Forest Fire Spread Predictor | Live Risk Heatmap</title>
+  <meta name="description" content="Grid-based Cellular Automaton forest fire simulation with dynamic live risk heatmap recalibration. Problem Statement No. 86 (RGMCET CSE Data Science).">
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome Icons for polished UI buttons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
+
+  <!-- Chart.js for real-time analytics graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <!-- Application Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-wrapper">
+    
+    <!-- ===================================================================
+         HEADER BAR
+         =================================================================== -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-icon-wrapper">
+          <i class="fa-solid fa-fire-flame-curved brand-flame-icon"></i>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title-row">
+            <h1 class="brand-title">Forest Fire Spread Predictor</h1>
+            <span class="badge badge-primary">Problem Statement No. 86</span>
+          </div>
+          <p class="brand-subtitle">Cellular Automaton Engine • Dynamic Live Risk Heatmap • RGMCET CSE (Data Science)</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Live Connection Status -->
+        <div class="status-pill" id="serverStatusPill" title="Backend Server Connectivity">
+          <span class="status-dot pulsing"></span>
+          <span class="status-label" id="serverStatusText">Connecting...</span>
+        </div>
+
+        <!-- Grid Dimension Badge -->
+        <div class="info-pill" id="gridInfoPill" title="Active Grid Dimensions">
+          <i class="fa-solid fa-border-all"></i>
+          <span id="gridDimensionsText">-- × --</span>
+        </div>
+
+        <!-- Theme Toggle (Dark / Light) -->
+        <button class="btn-icon" id="themeToggleBtn" title="Toggle Theme" aria-label="Toggle Dark and Light theme">
+          <i class="fa-solid fa-moon" id="themeIcon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- ===================================================================
+         MAIN DASHBOARD LAYOUT (3-COLUMN FLEX / GRID)
+         =================================================================== -->
+    <main class="dashboard-container">
+      
+      <!-- =================================================================
+           LEFT SIDEBAR: CONTROLS & ENVIRONMENT
+           ================================================================= -->
+      <aside class="sidebar-panel">
+        
+        <!-- Section 1: Dataset & CSV Upload -->
+        <div class="card panel-section">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-file-csv"></i> Dataset Manager</h3>
+            <span class="tag" id="datasetNameTag">processed_grid.csv</span>
+          </div>
+
+          <div class="drop-zone" id="dropZone">
+            <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
+            <p class="drop-text">Drag & drop CSV dataset here, or <span class="highlight">browse</span></p>
+            <span class="drop-hint">Supports auto-detection of rows, cols, elevation, slope</span>
+            <input type="file" id="csvFileInput" accept=".csv" class="file-input-hidden">
+          </div>
+
+          <div class="dataset-actions-row">
+            <button class="btn btn-secondary btn-sm" id="loadDefaultBtn" title="Reload default processed grid dataset">
+              <i class="fa-solid fa-rotate-left"></i> Reset to Default Grid
+            </button>
+          </div>
+        </div>
+
+        <!-- Section 2: Simulation Playback Controls -->
+        <div class="card panel-section">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-play"></i> Simulation Controls</h3>
+            <span class="step-counter" id="stepCounterBadge">Tick: 0</span>
+          </div>
+
+          <div class="control-buttons-grid">
+            <button class="btn btn-success" id="startBtn">
+              <i class="fa-solid fa-play"></i> Start
+            </button>
+            <button class="btn btn-warning" id="pauseBtn" disabled>
+              <i class="fa-solid fa-pause"></i> Pause
+            </button>
+            <button class="btn btn-primary" id="stepBtn">
+              <i class="fa-solid fa-forward-step"></i> Step (+1)
+            </button>
+            <button class="btn btn-danger" id="resetBtn">
+              <i class="fa-solid fa-arrows-rotate"></i> Reset
+            </button>
+          </div>
+
+          <!-- Speed Slider -->
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="speedSlider"><i class="fa-solid fa-gauge-high"></i> Simulation Speed</label>
+              <span class="slider-value" id="speedValueText">300 ms</span>
+            </div>
+            <input type="range" id="speedSlider" min="50" max="1200" step="50" value="300" class="range-slider">
+            <div class="slider-scale-labels">
+              <span>Fast (50ms)</span>
+              <span>Normal</span>
+              <span>Slow (1.2s)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Environmental Factors (Wind Setup) -->
+        <div class="card panel-section">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-wind"></i> Environmental Wind</h3>
+            <span class="wind-readout" id="windReadoutTag">18 km/h • 225° SW</span>
+          </div>
+
+          <div class="wind-controls-wrapper">
+            <!-- Wind Compass Graphic -->
+            <div class="compass-widget">
+              <div class="compass-dial" id="compassDial">
+                <div class="compass-needle" id="compassNeedle">
+                  <div class="needle-arrow"></div>
+                </div>
+                <span class="compass-point north">N</span>
+                <span class="compass-point east">E</span>
+                <span class="compass-point south">S</span>
+                <span class="compass-point west">W</span>
+              </div>
+              <div class="compass-center-info">
+                <span class="compass-degrees" id="compassDegreeText">225°</span>
+                <span class="compass-bearing" id="compassBearingText">SW</span>
+              </div>
+            </div>
+
+            <!-- Direction Slider -->
+            <div class="slider-group">
+              <div class="slider-header">
+                <label for="windDirSlider">Direction (Degrees)</label>
+                <span class="slider-value" id="windDirText">225°</span>
+              </div>
+              <input type="range" id="windDirSlider" min="0" max="360" step="5" value="225" class="range-slider">
+            </div>
+
+            <!-- Speed Slider -->
+            <div class="slider-group">
+              <div class="slider-header">
+                <label for="windSpeedSlider">Wind Speed (km/h)</label>
+                <span class="slider-value" id="windSpeedText">18 km/h</span>
+              </div>
+              <input type="range" id="windSpeedSlider" min="0" max="50" step="1" value="18" class="range-slider">
+            </div>
+
+            <!-- Quick Wind Presets -->
+            <div class="presets-row">
+              <button class="btn btn-outline-sm wind-preset" data-speed="0" data-dir="0">Calm</button>
+              <button class="btn btn-outline-sm wind-preset" data-speed="15" data-dir="90">East 15</button>
+              <button class="btn btn-outline-sm wind-preset" data-speed="22" data-dir="225">SW 22</button>
+              <button class="btn btn-outline-sm wind-preset" data-speed="35" data-dir="315">NW Gale</button>
+            </div>
+
+            <button class="btn btn-secondary btn-sm full-width" id="applyWindBtn">
+              <i class="fa-solid fa-arrows-spin"></i> Apply Wind Mid-Simulation
+            </button>
+          </div>
+        </div>
+
+        <!-- Section 4: Interactive Tool Mode -->
+        <div class="card panel-section">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-crosshairs"></i> Canvas Interaction Mode</h3>
+          </div>
+          <div class="segmented-control">
+            <button class="segment-btn active" id="modeIgniteBtn" data-mode="ignite">
+              <i class="fa-solid fa-fire"></i> Click to Ignite
+            </button>
+            <button class="segment-btn" id="modeInspectBtn" data-mode="inspect">
+              <i class="fa-solid fa-magnifying-glass"></i> Inspect Cell
+            </button>
+          </div>
+          <span class="control-caption" id="modeHelpText">
+            Click on any canvas cell to spawn a new initial ignition point.
+          </span>
+        </div>
+
+      </aside>
+
+      <!-- =================================================================
+           CENTER STAGE: CANVAS VIEWER & HEATMAP LEGEND
+           ================================================================= -->
+      <section class="viewport-panel card">
+        
+        <!-- Viewport Toolbar -->
+        <div class="viewport-toolbar">
+          
+          <!-- View Switcher Tabs -->
+          <div class="view-switch-tabs">
+            <button class="view-tab-btn active" id="viewStateBtn" data-view="state">
+              <i class="fa-solid fa-fire"></i> Fire State View
+            </button>
+            <button class="view-tab-btn" id="viewHeatmapBtn" data-view="heatmap">
+              <i class="fa-solid fa-temperature-half"></i> Live Risk Heatmap View
+            </button>
+          </div>
+
+          <!-- Canvas Utility Controls -->
+          <div class="canvas-tools">
+            <label class="toggle-switch" title="Toggle Grid Overlay Lines">
+              <input type="checkbox" id="toggleGridLines" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Grid</span>
+            </label>
+            <button class="btn-icon-sm" id="zoomInBtn" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+            <button class="btn-icon-sm" id="zoomOutBtn" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+            <button class="btn-icon-sm" id="zoomFitBtn" title="Fit to Screen"><i class="fa-solid fa-expand"></i></button>
+          </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="canvas-scroll-container" id="canvasContainer">
+          <canvas id="fireCanvas" width="600" height="600"></canvas>
+          
+          <!-- Floating Cell Inspection Tooltip -->
+          <div class="cell-tooltip" id="cellTooltip">
+            <div class="tooltip-header" id="ttCoordinates">(Row: 0, Col: 0)</div>
+            <div class="tooltip-body">
+              <div class="tt-row"><span>State:</span> <strong id="ttState">UNBURNED</strong></div>
+              <div class="tt-row"><span>Risk Score:</span> <strong id="ttRisk">0.00</strong></div>
+              <div class="tt-row"><span>Risk Level:</span> <strong id="ttRiskLevel">Low</strong></div>
+              <div class="tt-row"><span>Vegetation (Fuel):</span> <strong id="ttVegetation">0.70</strong></div>
+              <div class="tt-row"><span>Elevation:</span> <strong id="ttElevation">100.0 m</strong></div>
+              <div class="tt-row"><span>Slope:</span> <strong id="ttSlope">0.0°</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Color Legend Bar -->
+        <div class="legend-bar" id="legendContainer">
+          
+          <!-- Fire State Legend -->
+          <div class="legend-group" id="legendFireState">
+            <span class="legend-title">Fire States:</span>
+            <div class="legend-item">
+              <span class="legend-swatch swatch-unburned"></span>
+              <span>Unburned (Healthy Forest)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch swatch-burning"></span>
+              <span>Actively Burning</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch swatch-burned"></span>
+              <span>Burned Out (Charcoal)</span>
+            </div>
+          </div>
+
+          <!-- Heatmap Legend -->
+          <div class="legend-group hidden" id="legendHeatmap">
+            <span class="legend-title">Recalibrated Risk:</span>
+            <div class="legend-item">
+              <span class="legend-swatch swatch-low"></span>
+              <span>Low (<span id="legendCountLow">0</span>)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch swatch-moderate"></span>
+              <span>Moderate (<span id="legendCountMod">0</span>)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch swatch-high"></span>
+              <span>High (<span id="legendCountHigh">0</span>)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch swatch-veryhigh"></span>
+              <span>Very High (<span id="legendCountVHigh">0</span>)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch swatch-burned"></span>
+              <span>Burned (0.0)</span>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- =================================================================
+           RIGHT SIDEBAR: METRICS, KPI CARDS & CHARTS
+           ================================================================= -->
+      <aside class="sidebar-panel">
+        
+        <!-- KPI Metrics Grid -->
+        <div class="kpi-cards-grid">
+          
+          <!-- Active Burning KPI -->
+          <div class="kpi-card card kpi-burning">
+            <div class="kpi-icon-wrap">
+              <i class="fa-solid fa-fire"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Active Fires</span>
+              <span class="kpi-value" id="kpiBurningCount">0</span>
+              <span class="kpi-subtext" id="kpiBurningRate">+0 newly ignited</span>
+            </div>
+          </div>
+
+          <!-- Burned Out KPI -->
+          <div class="kpi-card card kpi-burned">
+            <div class="kpi-icon-wrap">
+              <i class="fa-solid fa-circle-dot"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Burned Out Area</span>
+              <span class="kpi-value" id="kpiBurnedCount">0</span>
+              <span class="kpi-subtext" id="kpiBurnedPercent">0.0% of forest</span>
+            </div>
+          </div>
+
+          <!-- Unburned Intact KPI -->
+          <div class="kpi-card card kpi-unburned">
+            <div class="kpi-icon-wrap">
+              <i class="fa-solid fa-tree"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Forest Intact</span>
+              <span class="kpi-value" id="kpiUnburnedCount">0</span>
+              <span class="kpi-subtext" id="kpiUnburnedPercent">100.0% preserved</span>
+            </div>
+          </div>
+
+          <!-- Affected Area in Hectares -->
+          <div class="kpi-card card kpi-area">
+            <div class="kpi-icon-wrap">
+              <i class="fa-solid fa-chart-area"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Affected Area</span>
+              <span class="kpi-value" id="kpiAreaHectares">0.0 ha</span>
+              <span class="kpi-subtext">Estimated footprint</span>
+            </div>
+          </div>
+
+          <!-- Threat Direction Compass -->
+          <div class="kpi-card card kpi-threat">
+            <div class="kpi-icon-wrap">
+              <i class="fa-solid fa-compass"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Threat Direction</span>
+              <span class="kpi-value" id="kpiThreatDirection">NE</span>
+              <span class="kpi-subtext">Centroid spread vector</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Chart 1: Progression Timeline -->
+        <div class="card panel-section chart-card">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-chart-line"></i> Fire Spread Timeline</h3>
+          </div>
+          <div class="chart-canvas-wrapper">
+            <canvas id="timelineChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Risk Class Distribution -->
+        <div class="card panel-section chart-card">
+          <div class="section-header">
+            <h3><i class="fa-solid fa-chart-pie"></i> Risk Class Distribution</h3>
+          </div>
+          <div class="chart-canvas-wrapper doughnut-wrapper">
+            <canvas id="riskDistributionChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Audit & Export Buttons -->
+        <div class="card panel-section">
+          <div class="export-actions-grid">
+            <button class="btn btn-primary btn-sm" id="viewReportBtn">
+              <i class="fa-solid fa-file-lines"></i> View Final Audit Report
+            </button>
+            <div class="export-row">
+              <button class="btn btn-outline-sm" id="exportJsonBtn" title="Export simulation state as JSON">
+                <i class="fa-solid fa-download"></i> JSON
+              </button>
+              <button class="btn btn-outline-sm" id="exportPngBtn" title="Save snapshot of grid as PNG image">
+                <i class="fa-solid fa-image"></i> PNG
+              </button>
+              <button class="btn btn-outline-sm" id="exportCsvBtn" title="Export step history as CSV">
+                <i class="fa-solid fa-table"></i> CSV
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+
+    </main>
+
+    <!-- ===================================================================
+         FOOTER
+         =================================================================== -->
+    <footer class="app-footer">
+      <span>Problem Statement No. 86 • Forest Fire Spread Predictor</span>
+      <span>RGMCET B.Tech CSE (Data Science) • Cellular Automata & Live Heatmap Engine</span>
+      <span id="footerEngineVersion">Engine v1.0.0 (Java 17 OOP + Javalin REST)</span>
+    </footer>
+
+    <!-- ===================================================================
+         MODAL: SIMULATION AUDIT REPORT
+         =================================================================== -->
+    <div class="modal-overlay hidden" id="reportModalOverlay">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2><i class="fa-solid fa-clipboard-check"></i> Simulation Impact & Spread Audit</h2>
+          <button class="btn-icon" id="closeReportModalBtn" aria-label="Close modal">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="report-summary-cards">
+            <div class="report-kpi">
+              <span class="report-kpi-label">Generations Advanced</span>
+              <span class="report-kpi-val" id="repTotalSteps">0</span>
+            </div>
+            <div class="report-kpi">
+              <span class="report-kpi-label">Total Burned Cells</span>
+              <span class="report-kpi-val" id="repTotalBurned">0</span>
+            </div>
+            <div class="report-kpi">
+              <span class="report-kpi-label">Area Consumed</span>
+              <span class="report-kpi-val" id="repTotalArea">0.0 ha</span>
+            </div>
+            <div class="report-kpi">
+              <span class="report-kpi-label">Peak Burning Fire</span>
+              <span class="report-kpi-val" id="repPeakBurning">0</span>
+            </div>
+            <div class="report-kpi">
+              <span class="report-kpi-label">Dominant Direction</span>
+              <span class="report-kpi-val" id="repSpreadDir">NE</span>
+            </div>
+          </div>
+
+          <h4>Step-by-Step Evolution History</h4>
+          <div class="table-scroll-container">
+            <table class="report-table" id="reportHistoryTable">
+              <thead>
+                <tr>
+                  <th>Step</th>
+                  <th>Burning</th>
+                  <th>Burned</th>
+                  <th>Intact</th>
+                  <th>New Fire</th>
+                  <th>Affected Area</th>
+                  <th>Direction</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="reportHistoryBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="downloadReportJsonBtn">
+            <i class="fa-solid fa-download"></i> Download Audit JSON
+          </button>
+          <button class="btn btn-primary" id="dismissModalBtn">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/controls.js"></script>
+</body>
+</html>

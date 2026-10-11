@@ -1,0 +1,36 @@
+{
+  "input_file": "C:\\Users\\subba\\OneDrive\\Desktop\\FireWeb\\data\\raw\\sample_forest_raw.csv",
+  "output_file": "C:\\Users\\subba\\OneDrive\\Desktop\\FireWeb\\data\\processed\\processed_grid.csv",
+  "initial_rows": 402,
+  "final_rows": 400,
+  "duplicate_rows_dropped": 2,
+  "invalid_coord_rows_dropped": 0,
+  "grid_rows": 20,
+  "grid_cols": 20,
+  "total_grid_cells": 400,
+  "sparse_cells_filled": 0,
+  "columns_mapped": {
+    "y": "row",
+    "x": "col",
+    "NDVI": "vegetation",
+    "altitude_m": "elevation",
+    "wind_direction": "wind_dir",
+    "wind_velocity": "wind_speed",
+    "ignition_point": "fire"
+  },
+  "columns_dropped": [
+    "sensor_id",
+    "ambient_temp_c",
+    "humidity_pct"
+  ],
+  "missing_values_imputed": {
+    "vegetation": 1,
+    "elevation": 1,
+    "wind_dir": 0,
+    "wind_speed": 0,
+    "fire": 0
+  },
+  "derived_slope_from_elevation": true,
+  "vegetation_normalised": true,
+  "ignition_cells_count": 1
+}
