@@ -9,5 +9,5 @@
  * badge, or by opening the site with ?backend=https://your-service.onrender.com
  */
 window.FIRE_PREDICTOR_CONFIG = {
-  BACKEND_URL: ""
+    BACKEND_URL: "https://firespread-predictor.onrender.com"
 };
